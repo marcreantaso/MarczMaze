@@ -24,6 +24,7 @@ export enum Page {
   GAME = 'game',
   LEADERBOARD = 'leaderboard',
   REWARDS = 'rewards',
+  PROFILE = 'profile',
 }
 
 export interface PlayerStats {
@@ -52,5 +53,7 @@ export interface TriviaQuestion {
 export interface User {
   email: string;
   password: string; // NOTE: In a real-world app, this should be a securely hashed password.
+  username: string;
+  avatar: string; // Identifier for the selected avatar
   stats: PlayerStats;
 }

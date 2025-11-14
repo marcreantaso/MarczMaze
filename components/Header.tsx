@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Page } from '../types';
-import { GamepadIcon, BarChartIcon, GiftIcon, QuestionMarkCircleIcon, CurrencyDollarIcon, ArrowLeftOnRectangleIcon } from './icons/Icons';
+import { GamepadIcon, BarChartIcon, GiftIcon, QuestionMarkCircleIcon, CurrencyDollarIcon, ArrowLeftOnRectangleIcon, UserCircleIcon } from './icons/Icons';
 
 interface HeaderProps {
-  playerEmail: string;
+  username: string;
   marczBalance: number;
   onNavigate: (page: Page) => void;
   onShowTrivia: () => void;
@@ -19,7 +18,7 @@ const NavButton: React.FC<{ onClick: () => void; icon: React.ReactNode; label: s
 );
 
 
-const Header: React.FC<HeaderProps> = ({ playerEmail, marczBalance, onNavigate, onShowTrivia, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ username, marczBalance, onNavigate, onShowTrivia, onLogout }) => {
   return (
     <header className="bg-slate-900/50 backdrop-blur-sm border-b border-cyan-500/20 sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({ playerEmail, marczBalance, onNavigate, 
             <NavButton onClick={() => onNavigate(Page.GAME)} icon={<GamepadIcon className="h-5 w-5"/>} label="Game"/>
             <NavButton onClick={() => onNavigate(Page.LEADERBOARD)} icon={<BarChartIcon className="h-5 w-5"/>} label="Leaderboard"/>
             <NavButton onClick={() => onNavigate(Page.REWARDS)} icon={<GiftIcon className="h-5 w-5"/>} label="Rewards"/>
+            <NavButton onClick={() => onNavigate(Page.PROFILE)} icon={<UserCircleIcon className="h-5 w-5"/>} label="Profile"/>
             <NavButton onClick={onShowTrivia} icon={<QuestionMarkCircleIcon className="h-5 w-5"/>} label="Trivia"/>
           </nav>
           <div className="flex items-center space-x-3">
@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ playerEmail, marczBalance, onNavigate, 
                 <span className="font-bold text-white">{marczBalance.toFixed(2)}</span>
                 <span className="text-fuchsia-300 font-orbitron text-xs">$MARCZ</span>
             </div>
-            <div className="hidden lg:block text-sm text-slate-400 truncate max-w-[150px]">{playerEmail}</div>
+            <div className="hidden md:block text-sm text-slate-400 truncate max-w-[150px]">{username}</div>
              <button onClick={onLogout} title="Logout" className="flex items-center p-2 text-slate-400 hover:bg-cyan-500/20 rounded-full transition-all duration-300 hover:text-white">
                 <ArrowLeftOnRectangleIcon className="h-5 w-5"/>
             </button>

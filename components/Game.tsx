@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateMaze } from '../services/mazeGenerator';
 import { MazeCell, PlayerPosition } from '../types';
 import { POINTS } from '../constants';
-import { ClockIcon, StarIcon, TrophyIcon, ArrowPathIcon } from './icons/Icons';
+import { ClockIcon, StarIcon, TrophyIcon, ArrowPathIcon, ChevronUpIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from './icons/Icons';
 
 const CELL_SIZE_PX = 24;
 
@@ -65,8 +64,6 @@ const Game: React.FC<GameProps> = ({ level, onLevelComplete }) => {
     startNewLevel();
   }, [level, startNewLevel]);
 
-  // FIX: Replaced `NodeJS.Timeout` with a browser-compatible timer implementation.
-  // This also fixes a potential runtime error by ensuring `clearInterval` is only called when a timer is set.
   useEffect(() => {
     if (gameState === 'playing') {
       const timer = setInterval(() => {
@@ -83,7 +80,7 @@ const Game: React.FC<GameProps> = ({ level, onLevelComplete }) => {
     onLevelComplete(finalScore, time);
   }, [time, score, onLevelComplete, mazeSize]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     if (gameState !== 'playing') return;
 
     const { x, y } = playerPos;
@@ -92,34 +89,48 @@ const Game: React.FC<GameProps> = ({ level, onLevelComplete }) => {
 
     let newPos = { ...playerPos };
 
-    if (e.key === 'ArrowUp' || e.key === 'w') {
-      if (!currentCell.walls.top) newPos.y -= 1;
-    } else if (e.key === 'ArrowDown' || e.key === 's') {
-      if (!currentCell.walls.bottom) newPos.y += 1;
-    } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-      if (!currentCell.walls.left) newPos.x -= 1;
-    } else if (e.key === 'ArrowRight' || e.key === 'd') {
-      if (!currentCell.walls.right) newPos.x += 1;
-    }
+    if (direction === 'up' && !currentCell.walls.top) newPos.y -= 1;
+    else if (direction === 'down' && !currentCell.walls.bottom) newPos.y += 1;
+    else if (direction === 'left' && !currentCell.walls.left) newPos.x -= 1;
+    else if (direction === 'right' && !currentCell.walls.right) newPos.x += 1;
     
     if (newPos.x !== x || newPos.y !== y) {
-      const nextCell = maze[newPos.y][newPos.x];
-      if (nextCell.hasItem) {
-          nextCell.hasItem = false; // Mutating state here for performance, re-render is triggered by setPlayerPos
-          setItemsCollected(prev => prev + 1);
-          setScore(prev => prev + POINTS.HIDDEN_ITEM);
-      }
-      setPlayerPos(newPos);
-      if(nextCell.isEnd) {
-        handleWin();
+      const nextCell = maze[newPos.y]?.[newPos.x];
+      if (nextCell) {
+          if (nextCell.hasItem) {
+              nextCell.hasItem = false;
+              setItemsCollected(prev => prev + 1);
+              setScore(prev => prev + POINTS.HIDDEN_ITEM);
+          }
+          setPlayerPos(newPos);
+          if(nextCell.isEnd) {
+            handleWin();
+          }
       }
     }
   }, [gameState, playerPos, maze, handleWin]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowUp' || e.key === 'w') handleMove('up');
+    else if (e.key === 'ArrowDown' || e.key === 's') handleMove('down');
+    else if (e.key === 'ArrowLeft' || e.key === 'a') handleMove('left');
+    else if (e.key === 'ArrowRight' || e.key === 'd') handleMove('right');
+  }, [handleMove]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+  
+  const DPadButton: React.FC<{ direction: 'up' | 'down' | 'left' | 'right', children: React.ReactNode, className?: string }> = ({ direction, children, className }) => (
+    <button
+      onClick={() => handleMove(direction)}
+      className={`bg-slate-700/50 rounded-full w-16 h-16 flex items-center justify-center text-cyan-200 active:bg-cyan-500/50 transform active:scale-95 transition-all duration-100 ${className}`}
+      aria-label={`Move ${direction}`}
+    >
+      {children}
+    </button>
+  );
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -137,10 +148,20 @@ const Game: React.FC<GameProps> = ({ level, onLevelComplete }) => {
                 <span className="flex items-center gap-2 text-slate-300"><StarIcon className="w-5 h-5 text-cyan-400" /> Items:</span>
                 <span className="font-mono font-bold text-white">{itemsCollected} / {totalItems}</span>
             </div>
-            <p className="text-sm text-slate-400 pt-4 border-t border-slate-700">Use Arrow Keys or WASD to navigate. Reach the glowing purple square to complete the level.</p>
+            <p className="text-sm text-slate-400 pt-4 border-t border-slate-700">Use Arrow Keys, WASD, or the on-screen controls to navigate. Reach the glowing purple square.</p>
+
+            <div className="pt-4 border-t border-slate-700 lg:hidden">
+              <h3 className="text-center text-slate-400 font-bold mb-2 uppercase">Controls</h3>
+              <div className="grid grid-cols-3 grid-rows-3 w-48 h-48 mx-auto">
+                <div className="col-start-2 row-start-1 flex justify-center items-center"><DPadButton direction="up"><ChevronUpIcon className="w-10 h-10" /></DPadButton></div>
+                <div className="col-start-1 row-start-2 flex justify-center items-center"><DPadButton direction="left"><ChevronLeftIcon className="w-10 h-10" /></DPadButton></div>
+                <div className="col-start-3 row-start-2 flex justify-center items-center"><DPadButton direction="right"><ChevronRightIcon className="w-10 h-10" /></DPadButton></div>
+                <div className="col-start-2 row-start-3 flex justify-center items-center"><DPadButton direction="down"><ChevronDownIcon className="w-10 h-10" /></DPadButton></div>
+              </div>
+            </div>
         </div>
 
-        <div className="flex-grow flex items-center justify-center">
+        <div className="flex-grow flex items-center justify-center w-full lg:w-auto">
             {gameState === 'won' && (
                 <div className="absolute inset-0 z-10 bg-black/70 flex flex-col items-center justify-center text-center p-4">
                     <h2 className="font-orbitron text-5xl text-glow-fuchsia mb-4">LEVEL CLEARED</h2>
@@ -157,7 +178,7 @@ const Game: React.FC<GameProps> = ({ level, onLevelComplete }) => {
                     </button>
                 </div>
             )}
-            <div className="bg-slate-900 p-2 border-2 border-cyan-700 rounded-lg shadow-2xl shadow-cyan-500/20">
+            <div className="bg-slate-900 p-2 border-2 border-cyan-700 rounded-lg shadow-2xl shadow-cyan-500/20 overflow-auto custom-scrollbar">
                 <div className="relative" style={{ width: mazeSize * CELL_SIZE_PX, height: mazeSize * CELL_SIZE_PX }}>
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${mazeSize}, 1fr)` }}>
                         {maze.flat().map(cell => <MemoizedMazeCell key={`${cell.x}-${cell.y}`} cell={cell} />)}

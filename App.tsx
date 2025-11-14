@@ -6,20 +6,14 @@ import Leaderboard from './components/Leaderboard';
 import Login from './components/Login';
 import RewardsHub from './components/RewardsHub';
 import TriviaModal from './components/TriviaModal';
+import Profile from './components/Profile';
 import { Page, PlayerStats, LeaderboardEntry, User } from './types';
 import { MOCK_LEADERBOARD_DATA } from './constants';
 
 const App: React.FC = () => {
-  const [playerEmail, setPlayerEmail] = useState<string | null>(() => sessionStorage.getItem('marcz_maze_currentUser'));
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState<Page>(Page.GAME);
   const [isTriviaVisible, setTriviaVisible] = useState(false);
-
-  const [playerStats, setPlayerStats] = useState<PlayerStats>({
-    level: 1,
-    totalPoints: 0,
-    marczBalance: 0,
-    fastestTime: null,
-  });
 
   // Simulated database helpers using localStorage
   const db = useMemo(() => ({
@@ -34,93 +28,106 @@ const App: React.FC = () => {
     }
   }), []);
 
-  // Effect to load player data on login
+  // Effect to load user data on initial app load
   useEffect(() => {
-    if (playerEmail) {
+    const userEmail = sessionStorage.getItem('marcz_maze_currentUser');
+    if (userEmail) {
       const users = db.getUsers();
-      const currentUser = users[playerEmail];
-      if (currentUser) {
-        setPlayerStats(currentUser.stats);
+      const user = users[userEmail];
+      if (user) {
+        setCurrentUser(user);
       }
-      sessionStorage.setItem('marcz_maze_currentUser', playerEmail);
-    } else {
-      sessionStorage.removeItem('marcz_maze_currentUser');
     }
-  }, [playerEmail, db]);
+  }, [db]);
 
-  // Effect to save player stats when they change
+  // Effect to save user data whenever it changes
   useEffect(() => {
-    if (playerEmail) {
-      const users = db.getUsers();
-      const currentUser = users[playerEmail];
-      if (currentUser && JSON.stringify(currentUser.stats) !== JSON.stringify(playerStats)) {
-        const updatedUser = { ...currentUser, stats: playerStats };
-        db.saveUser(updatedUser);
-      }
+    if (currentUser) {
+      db.saveUser(currentUser);
     }
-  }, [playerStats, playerEmail, db]);
+  }, [currentUser, db]);
 
   const handleLogin = (email: string) => {
-    setPlayerEmail(email);
+    const users = db.getUsers();
+    const user = users[email];
+    if (user) {
+        setCurrentUser(user);
+        sessionStorage.setItem('marcz_maze_currentUser', email);
+    }
   };
 
   const handleLogout = () => {
-      setPlayerEmail(null);
+      setCurrentUser(null);
+      sessionStorage.removeItem('marcz_maze_currentUser');
   };
 
   const updatePlayerStats = useCallback((points: number, time: number) => {
-    setPlayerStats(prev => {
-      const newFastestTime = prev.fastestTime === null || time < prev.fastestTime ? time : prev.fastestTime;
-      return {
-        ...prev,
-        level: prev.level + 1,
-        totalPoints: prev.totalPoints + points,
+    setCurrentUser(prevUser => {
+      if (!prevUser) return null;
+      const newFastestTime = prevUser.stats.fastestTime === null || time < prevUser.stats.fastestTime ? time : prevUser.stats.fastestTime;
+      const newStats: PlayerStats = {
+        ...prevUser.stats,
+        level: prevUser.stats.level + 1,
+        totalPoints: prevUser.stats.totalPoints + points,
         fastestTime: newFastestTime,
       };
+      return { ...prevUser, stats: newStats };
     });
   }, []);
 
   const convertPointsToMarcz = useCallback((points: number) => {
     const marczEarned = points / 10; // 10 points = 1 $MARCZ
-    setPlayerStats(prev => ({
-      ...prev,
-      totalPoints: prev.totalPoints - points,
-      marczBalance: prev.marczBalance + marczEarned,
-    }));
+    setCurrentUser(prevUser => {
+        if (!prevUser) return null;
+        const newStats: PlayerStats = {
+            ...prevUser.stats,
+            totalPoints: prevUser.stats.totalPoints - points,
+            marczBalance: prevUser.stats.marczBalance + marczEarned,
+        };
+        return { ...prevUser, stats: newStats };
+    });
     return marczEarned;
+  }, []);
+
+  const handleProfileUpdate = useCallback((data: { username: string; avatar: string }) => {
+    setCurrentUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, ...data };
+    });
   }, []);
   
   const leaderboardData: LeaderboardEntry[] = useMemo(() => {
-    if (!playerEmail) return MOCK_LEADERBOARD_DATA;
+    if (!currentUser) return MOCK_LEADERBOARD_DATA;
     const playerData: LeaderboardEntry = {
         rank: 0,
-        name: playerEmail.split('@')[0],
-        marcz: playerStats.marczBalance,
-        fastestTime: playerStats.fastestTime,
-        level: playerStats.level,
+        name: currentUser.username,
+        marcz: currentUser.stats.marczBalance,
+        fastestTime: currentUser.stats.fastestTime,
+        level: currentUser.stats.level,
         isPlayer: true
     };
     return [...MOCK_LEADERBOARD_DATA, playerData];
-  }, [playerEmail, playerStats]);
+  }, [currentUser]);
 
 
-  if (!playerEmail) {
+  if (!currentUser) {
     return <Login onLogin={handleLogin} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-cyan-100 flex flex-col">
       <Header 
-        playerEmail={playerEmail} 
-        marczBalance={playerStats.marczBalance} 
+        username={currentUser.username} 
+        marczBalance={currentUser.stats.marczBalance} 
         onNavigate={setCurrentPage}
         onShowTrivia={() => setTriviaVisible(true)}
         onLogout={handleLogout}
       />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        {currentPage === Page.GAME && <Game level={playerStats.level} onLevelComplete={updatePlayerStats} />}
+        {currentPage === Page.GAME && <Game level={currentUser.stats.level} onLevelComplete={updatePlayerStats} />}
         {currentPage === Page.LEADERBOARD && <Leaderboard data={leaderboardData} />}
-        {currentPage === Page.REWARDS && <RewardsHub playerStats={playerStats} onConvert={convertPointsToMarcz} />}
+        {currentPage === Page.REWARDS && <RewardsHub playerStats={currentUser.stats} onConvert={convertPointsToMarcz} />}
+        {currentPage === Page.PROFILE && <Profile user={currentUser} onUpdateProfile={handleProfileUpdate} />}
       </main>
       {isTriviaVisible && <TriviaModal onClose={() => setTriviaVisible(false)} />}
        <footer className="text-center p-4 text-xs text-slate-500 font-mono">

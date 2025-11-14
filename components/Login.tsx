@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { KeyIcon, AtSymbolIcon, UserPlusIcon } from './icons/Icons';
 import { User, PlayerStats } from '../types';
+import { AVATARS } from '../constants';
 
 interface LoginProps {
   onLogin: (email: string) => void;
@@ -70,7 +71,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         fastestTime: null,
       };
 
-      const newUser: User = { email, password, stats: initialStats };
+      const newUser: User = { 
+        email, 
+        password, 
+        stats: initialStats,
+        username: email.split('@')[0],
+        avatar: AVATARS[0],
+      };
       db.saveUser(newUser);
       onLogin(email);
     } else { // signIn mode

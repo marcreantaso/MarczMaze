@@ -39,3 +39,12 @@ export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
         lore: "The dual-spirals of the $Marcz symbol represent the endless journey inwards to find truth, and outwards to share knowledge, mirroring the structure of the mazes themselves."
     }
 ];
+
+export const AVATARS: string[] = [
+    'avatar-glitch-cat',
+    'avatar-neon-skull',
+    'avatar-circuit-brain',
+    'avatar-data-ghost',
+    'avatar-ruin-golem',
+    'avatar-tech-oracle',
+];
